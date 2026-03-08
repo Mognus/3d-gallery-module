@@ -5,33 +5,40 @@ import { useGLTF, useTexture } from "@react-three/drei";
 import type { Mesh } from "three";
 import { MeshStandardMaterial, SRGBColorSpace } from "three";
 
-const MODEL_PATH = "/models/fancy-picture-frame.glb";
-const CANVAS_MESH_NAME = "Plane005";
-
 interface PictureFrameProps {
+    modelUrl: string;
+    canvasMeshName?: string;
     imageUrl?: string;
     scale?: number;
 }
 
-export function PictureFrame({ imageUrl, scale = 3 }: PictureFrameProps) {
-    const { scene } = useGLTF(MODEL_PATH);
+export function PictureFrame({ modelUrl, canvasMeshName, imageUrl, scale = 3 }: PictureFrameProps) {
+    const { scene } = useGLTF(modelUrl);
 
     return (
         <group scale={scale}>
             <primitive object={scene} />
-            {imageUrl && <CanvasTexture scene={scene} imageUrl={imageUrl} />}
+            {imageUrl && canvasMeshName && (
+                <CanvasTexture scene={scene} imageUrl={imageUrl} canvasMeshName={canvasMeshName} />
+            )}
         </group>
     );
 }
 
-function CanvasTexture({ scene, imageUrl }: { scene: import("three").Object3D; imageUrl: string }) {
+function CanvasTexture({
+    scene,
+    imageUrl,
+    canvasMeshName,
+}: {
+    scene: import("three").Object3D;
+    imageUrl: string;
+    canvasMeshName: string;
+}) {
     const texture = useTexture(imageUrl);
 
     useEffect(() => {
-        // GLTF expects flipY=false (UV origin top-left), Three.js defaults to true
         texture.colorSpace = SRGBColorSpace;
         texture.flipY = false;
-        // Rotate 180° to match Blender UV orientation
         texture.center.set(0.5, 0.5);
         texture.rotation = Math.PI;
 
@@ -39,8 +46,7 @@ function CanvasTexture({ scene, imageUrl }: { scene: import("three").Object3D; i
             if ((child as Mesh).isMesh) {
                 const mesh = child as Mesh;
                 const mat = mesh.material as MeshStandardMaterial;
-                // Find the canvas surface by mesh name or material name
-                if (mesh.name === CANVAS_MESH_NAME || mat.name?.includes("canvas")) {
+                if (mesh.name === canvasMeshName || mat.name?.includes("canvas")) {
                     const newMat = mat.clone();
                     newMat.map = texture;
                     newMat.color.set(0xffffff);
@@ -49,9 +55,7 @@ function CanvasTexture({ scene, imageUrl }: { scene: import("three").Object3D; i
                 }
             }
         });
-    }, [scene, texture]);
+    }, [scene, texture, canvasMeshName]);
 
     return null;
 }
-
-useGLTF.preload(MODEL_PATH);

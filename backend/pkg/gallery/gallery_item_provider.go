@@ -21,12 +21,8 @@ func (p *GalleryItemProvider) GetModelName() string {
 }
 
 func (p *GalleryItemProvider) GetSchema() crud.Schema {
-	var assets []ModelAsset
-	p.db.Find(&assets)
-	assetOptions := make([]crud.SelectOption, len(assets))
-	for i, a := range assets {
-		assetOptions[i] = crud.SelectOption{Value: a.ID, Label: a.Name}
-	}
+	assetOptions := crud.GetRelatedOptions(p.db, &ModelAsset{}, "ID", "Name")
+	imageOptions := crud.GetRelatedOptions(p.db, &Image{}, "ID", "Name")
 
 	return crud.Schema{
 		Name:        "gallery_items",
@@ -36,7 +32,7 @@ func (p *GalleryItemProvider) GetSchema() crud.Schema {
 			{Name: "title", Type: "string", Label: "Title", Required: true, Editable: true, Width: "200px"},
 			{Name: "model_asset_id", Type: "relation", Label: "Model Asset", Required: true, Editable: true, Hidden: true, Options: assetOptions},
 			{Name: "model_asset", Type: "object", Label: "Model Asset", Readonly: true, Editable: false, Width: "160px"},
-			{Name: "image_id", Type: "number", Label: "Image ID", Editable: true, Width: "100px"},
+			{Name: "image_id", Type: "relation", Label: "Image", Editable: true, Hidden: true, Options: imageOptions},
 			{Name: "image", Type: "object", Label: "Image", Readonly: true, Editable: false, Width: "160px"},
 			{Name: "created_at", Type: "date", Label: "Created", Readonly: true, Editable: true, Width: "160px"},
 			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true, Editable: true, Width: "160px"},
