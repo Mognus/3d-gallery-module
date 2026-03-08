@@ -5,14 +5,19 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { PictureFrame } from "./PictureFrame";
 
-export function GalleryScene() {
+interface GallerySceneProps {
+    imageUrl: string;
+    className?: string;
+}
+
+export function GalleryScene({ imageUrl, className }: GallerySceneProps) {
     return (
-        <div className="w-full h-full">
+        <div className={className ?? "w-full h-full"}>
             <Canvas camera={{ position: [0, 0, 20], fov: 40 }}>
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <Suspense fallback={null}>
-                    <PictureFrame scale={3} imageUrl="https://picsum.photos/400/300" />
+                    <PictureFrame scale={3} imageUrl={imageUrl} />
                 </Suspense>
                 <OrbitControls
                     enablePan={false}
