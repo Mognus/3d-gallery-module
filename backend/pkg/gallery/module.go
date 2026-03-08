@@ -7,17 +7,19 @@ import (
 
 type Module struct {
 	db                  *gorm.DB
+	uploadDir           string
 	modelAssetProvider  *ModelAssetProvider
 	imageProvider       *ImageProvider
 	galleryItemProvider *GalleryItemProvider
 }
 
-func New(db *gorm.DB) *Module {
+func New(db *gorm.DB, uploadDir string) *Module {
 	assetProvider := NewModelAssetProvider(db)
 	return &Module{
 		db:                  db,
+		uploadDir:           uploadDir,
 		modelAssetProvider:  assetProvider,
-		imageProvider:       NewImageProvider(db),
+		imageProvider:       NewImageProvider(db, uploadDir),
 		galleryItemProvider: NewGalleryItemProvider(db, assetProvider),
 	}
 }

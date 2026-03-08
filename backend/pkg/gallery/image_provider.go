@@ -1,18 +1,26 @@
 package gallery
 
 import (
+	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"template/modules/core/pkg/crud"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
 
+var sanitizeRe = regexp.MustCompile(`[^a-zA-Z0-9-_]`)
+
 type ImageProvider struct {
-	db *gorm.DB
+	db        *gorm.DB
+	uploadDir string
 }
 
-func NewImageProvider(db *gorm.DB) *ImageProvider {
-	return &ImageProvider{db: db}
+func NewImageProvider(db *gorm.DB, uploadDir string) *ImageProvider {
+	return &ImageProvider{db: db, uploadDir: uploadDir}
 }
 
 func (p *ImageProvider) GetModelName() string {
@@ -24,11 +32,11 @@ func (p *ImageProvider) GetSchema() crud.Schema {
 		Name:        "gallery_images",
 		DisplayName: "Gallery Images",
 		Fields: []crud.Field{
-			{Name: "id", Type: "number", Label: "ID", Readonly: true, Editable: true, Width: "80px"},
-			{Name: "name", Type: "string", Label: "Name", Editable: true, Width: "200px"},
-			{Name: "url", Type: "string", Label: "URL", Required: true, Editable: true, Width: "300px"},
-			{Name: "created_at", Type: "date", Label: "Created", Readonly: true, Editable: true, Width: "160px"},
-			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true, Editable: true, Width: "160px"},
+			{Name: "id", Type: "number", Label: "ID", Readonly: true, Width: "80px"},
+			{Name: "name", Type: "string", Label: "Name", Width: "200px"},
+			{Name: "url", Type: "file", Label: "Image", Required: true, Width: "300px"},
+			{Name: "created_at", Type: "date", Label: "Created", Readonly: true, Width: "160px"},
+			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true, Width: "160px"},
 		},
 		Searchable: []string{"name", "url"},
 	}
@@ -66,12 +74,73 @@ func (p *ImageProvider) GetHandler() fiber.Handler {
 	return crud.DefaultGetHandler(p)
 }
 
+// CreateHandler handles both multipart (file upload) and JSON (URL) requests.
 func (p *ImageProvider) CreateHandler() fiber.Handler {
-	return crud.DefaultCreateHandler(p)
+	return func(c *fiber.Ctx) error {
+		file, err := c.FormFile("file")
+		if err != nil {
+			// No file → fall back to JSON create (URL mode)
+			return crud.DefaultCreateHandler(p)(c)
+		}
+
+		ext := filepath.Ext(file.Filename)
+		baseName := strings.TrimSuffix(file.Filename, ext)
+		sanitized := sanitizeRe.ReplaceAllString(baseName, "-")
+		filename := fmt.Sprintf("%s-%d%s", sanitized, time.Now().UnixNano(), ext)
+
+		if err := c.SaveFile(file, filepath.Join(p.uploadDir, filename)); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save file"})
+		}
+
+		name := c.FormValue("name")
+		if name == "" {
+			name = baseName
+		}
+
+		img := Image{Name: name, URL: "/uploads/gallery/" + filename}
+		if err := p.db.Create(&img).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create record"})
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(img)
+	}
 }
 
+// UpdateHandler handles both multipart (new file) and JSON (name/url change only).
 func (p *ImageProvider) UpdateHandler() fiber.Handler {
-	return crud.DefaultUpdateHandler(p)
+	return func(c *fiber.Ctx) error {
+		file, err := c.FormFile("file")
+		if err != nil {
+			// No file → fall back to JSON update
+			return crud.DefaultUpdateHandler(p)(c)
+		}
+
+		ext := filepath.Ext(file.Filename)
+		baseName := strings.TrimSuffix(file.Filename, ext)
+		sanitized := sanitizeRe.ReplaceAllString(baseName, "-")
+		filename := fmt.Sprintf("%s-%d%s", sanitized, time.Now().UnixNano(), ext)
+
+		if err := c.SaveFile(file, filepath.Join(p.uploadDir, filename)); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save file"})
+		}
+
+		name := c.FormValue("name")
+		if name == "" {
+			name = baseName
+		}
+
+		id := c.Params("id")
+		if err := p.db.Model(&Image{}).Where("id = ?", id).Updates(map[string]any{
+			"name": name,
+			"url":  "/uploads/gallery/" + filename,
+		}).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update record"})
+		}
+
+		var img Image
+		p.db.First(&img, id)
+		return c.JSON(img)
+	}
 }
 
 func (p *ImageProvider) DeleteHandler() fiber.Handler {
