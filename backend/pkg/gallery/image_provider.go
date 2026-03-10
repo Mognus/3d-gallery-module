@@ -32,11 +32,11 @@ func (p *ImageProvider) GetSchema() crud.Schema {
 		Name:        "gallery_images",
 		DisplayName: "Gallery Images",
 		Fields: []crud.Field{
-			{Name: "id", Type: "number", Label: "ID", Readonly: true, Width: "80px"},
-			{Name: "name", Type: "string", Label: "Name", Width: "200px"},
-			{Name: "url", Type: "file", Label: "Image", Required: true, Width: "300px"},
-			{Name: "created_at", Type: "date", Label: "Created", Readonly: true, Width: "160px"},
-			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true, Width: "160px"},
+			{Name: "id", Type: "number", Label: "ID", Readonly: true},
+			{Name: "name", Type: "string", Label: "Name"},
+			{Name: "url", Type: "file", Label: "Image", Required: true},
+			{Name: "created_at", Type: "date", Label: "Created", Readonly: true},
+			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true},
 		},
 		Searchable: []string{"name", "url"},
 	}
