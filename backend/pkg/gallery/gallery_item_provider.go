@@ -7,6 +7,11 @@ import (
 	"gorm.io/gorm"
 )
 
+var galleryItemListConfig = crud.ListConfig{
+	Preloads:   []string{"ModelAsset", "Image"},
+	Searchable: []string{"title"},
+}
+
 type GalleryItemProvider struct {
 	db            *gorm.DB
 	assetProvider *ModelAssetProvider
@@ -38,12 +43,12 @@ func (p *GalleryItemProvider) GetSchema() crud.Schema {
 			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true},
 		},
 		Filterable: []string{"model_asset_id"},
-		Searchable: []string{"title"},
+		Searchable: galleryItemListConfig.Searchable,
 	}
 }
 
 func (p *GalleryItemProvider) List(filters map[string]string, page, limit int) (crud.ListResponse, error) {
-	return crud.DefaultList(p.db, &GalleryItem{}, filters, page, limit, "ModelAsset", "Image")
+	return crud.DefaultList(p.db, &GalleryItem{}, filters, page, limit, galleryItemListConfig)
 }
 
 func (p *GalleryItemProvider) Get(id string) (any, error) {

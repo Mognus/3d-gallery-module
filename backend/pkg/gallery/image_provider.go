@@ -14,6 +14,10 @@ import (
 
 var sanitizeRe = regexp.MustCompile(`[^a-zA-Z0-9-_]`)
 
+var imageListConfig = crud.ListConfig{
+	Searchable: []string{"name", "url"},
+}
+
 type ImageProvider struct {
 	db        *gorm.DB
 	uploadDir string
@@ -38,12 +42,12 @@ func (p *ImageProvider) GetSchema() crud.Schema {
 			{Name: "created_at", Type: "date", Label: "Created", Readonly: true},
 			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true},
 		},
-		Searchable: []string{"name", "url"},
+		Searchable: imageListConfig.Searchable,
 	}
 }
 
 func (p *ImageProvider) List(filters map[string]string, page, limit int) (crud.ListResponse, error) {
-	return crud.DefaultList(p.db, &Image{}, filters, page, limit)
+	return crud.DefaultList(p.db, &Image{}, filters, page, limit, imageListConfig)
 }
 
 func (p *ImageProvider) Get(id string) (any, error) {

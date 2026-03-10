@@ -11,6 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
+var modelAssetListConfig = crud.ListConfig{
+	Searchable: []string{"name"},
+}
+
 type ModelAssetProvider struct {
 	db        *gorm.DB
 	uploadDir string
@@ -37,12 +41,12 @@ func (p *ModelAssetProvider) GetSchema() crud.Schema {
 			{Name: "created_at", Type: "date", Label: "Created", Readonly: true},
 			{Name: "updated_at", Type: "date", Label: "Updated", Readonly: true},
 		},
-		Searchable: []string{"name"},
+		Searchable: modelAssetListConfig.Searchable,
 	}
 }
 
 func (p *ModelAssetProvider) List(filters map[string]string, page, limit int) (crud.ListResponse, error) {
-	return crud.DefaultList(p.db, &ModelAsset{}, filters, page, limit)
+	return crud.DefaultList(p.db, &ModelAsset{}, filters, page, limit, modelAssetListConfig)
 }
 
 func (p *ModelAssetProvider) Get(id string) (any, error) {
